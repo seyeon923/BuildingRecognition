@@ -98,63 +98,63 @@
 //	waitKey(0);
 //	return 0;
 //}
-//
-//std::vector<std::string> objects_names_from_file(std::string const filename) {
-//	std::ifstream file(filename);
-//	std::vector<std::string> file_lines;
-//	if (!file.is_open()) return file_lines;
-//	for (std::string line; getline(file, line);) file_lines.push_back(line);
-//	std::cout << "object names loaded \n";
-//	return file_lines;
-//}
-//
-//void alignImages(Mat& im1, Mat& im2, Mat& im1Reg, Mat& h, int maxFeatures = 500, float goodMatchPercent = 0.15f){
-//	// Convert images to grayscale
-//	Mat im1Gray, im2Gray;
-//	cvtColor(im1, im1Gray, CV_BGR2GRAY);
-//	cvtColor(im2, im2Gray, CV_BGR2GRAY);
-//
-//	// Variables to store keypoints and descriptors
-//	std::vector<KeyPoint> keypoints1, keypoints2;
-//	Mat descriptors1, descriptors2;
-//
-//	// Detect ORB features and compute descriptors.
-//	Ptr<Feature2D> orb = ORB::create(maxFeatures);
-//	orb->detectAndCompute(im1Gray, Mat(), keypoints1, descriptors1);
-//	orb->detectAndCompute(im2Gray, Mat(), keypoints2, descriptors2);
-//
-//	// Match features.
-//	std::vector<DMatch> matches;
-//	Ptr<DescriptorMatcher> matcher = DescriptorMatcher::create("BruteForce-Hamming");
-//	matcher->match(descriptors1, descriptors2, matches, Mat());
-//
-//	// Sort matches by score
-//	std::sort(matches.begin(), matches.end());
-//
-//	// Remove not so good matches
-//	const int numGoodMatches = matches.size() * goodMatchPercent;
-//	matches.erase(matches.begin() + numGoodMatches, matches.end());
-//
-//
-//	//// Draw top matches
-//	//Mat imMatches;
-//	//drawMatches(im1, keypoints1, im2, keypoints2, matches, imMatches);
-//	//imwrite("matches.jpg", imMatches);
-//
-//
-//	// Extract location of good matches
-//	std::vector<Point2f> points1, points2;
-//
-//	for (size_t i = 0; i < matches.size(); i++)
-//	{
-//		points1.push_back(keypoints1[matches[i].queryIdx].pt);
-//		points2.push_back(keypoints2[matches[i].trainIdx].pt);
-//	}
-//
-//	// Find homography
-//	h = findHomography(points1, points2, RANSAC);
-//
-//	// Use homography to warp image
-//	warpPerspective(im1, im1Reg, h, im2.size());
-//
-//}
+
+std::vector<std::string> objects_names_from_file(std::string const filename) {
+	std::ifstream file(filename);
+	std::vector<std::string> file_lines;
+	if (!file.is_open()) return file_lines;
+	for (std::string line; getline(file, line);) file_lines.push_back(line);
+	std::cout << "object names loaded \n";
+	return file_lines;
+}
+
+void alignImages(Mat& im1, Mat& im2, Mat& im1Reg, Mat& h, int maxFeatures = 500, float goodMatchPercent = 0.15f){
+	// Convert images to grayscale
+	Mat im1Gray, im2Gray;
+	cvtColor(im1, im1Gray, CV_BGR2GRAY);
+	cvtColor(im2, im2Gray, CV_BGR2GRAY);
+
+	// Variables to store keypoints and descriptors
+	std::vector<KeyPoint> keypoints1, keypoints2;
+	Mat descriptors1, descriptors2;
+
+	// Detect ORB features and compute descriptors.
+	Ptr<Feature2D> orb = ORB::create(maxFeatures);
+	orb->detectAndCompute(im1Gray, Mat(), keypoints1, descriptors1);
+	orb->detectAndCompute(im2Gray, Mat(), keypoints2, descriptors2);
+
+	// Match features.
+	std::vector<DMatch> matches;
+	Ptr<DescriptorMatcher> matcher = DescriptorMatcher::create("BruteForce-Hamming");
+	matcher->match(descriptors1, descriptors2, matches, Mat());
+
+	// Sort matches by score
+	std::sort(matches.begin(), matches.end());
+
+	// Remove not so good matches
+	const int numGoodMatches = matches.size() * goodMatchPercent;
+	matches.erase(matches.begin() + numGoodMatches, matches.end());
+
+
+	//// Draw top matches
+	//Mat imMatches;
+	//drawMatches(im1, keypoints1, im2, keypoints2, matches, imMatches);
+	//imwrite("matches.jpg", imMatches);
+
+
+	// Extract location of good matches
+	std::vector<Point2f> points1, points2;
+
+	for (size_t i = 0; i < matches.size(); i++)
+	{
+		points1.push_back(keypoints1[matches[i].queryIdx].pt);
+		points2.push_back(keypoints2[matches[i].trainIdx].pt);
+	}
+
+	// Find homography
+	h = findHomography(points1, points2, RANSAC);
+
+	// Use homography to warp image
+	warpPerspective(im1, im1Reg, h, im2.size());
+
+}

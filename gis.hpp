@@ -47,7 +47,7 @@ public:
 	T x, y;
 
 	Coord2D(T x, T y) : x(x), y(y) {}
-	Coord2D() : x(0), y(0) {}
+	Coord2D() : x(-1), y(-1) {}
 
 	Coord2D operator+(const Coord2D& other) {
 		Coord2D<T> ret(this->x + other.x, this->y + other.y);
@@ -75,6 +75,7 @@ public:
 
 	Coord3D(T x, T y, T z) : x(x), y(y), z(z) {}
 	Coord3D(Coord2D<T> coord2D, T altitude) : x(coord2D.x), y(coord2D.y), z(altitude){}
+	Coord3D() :x(-1), y(-1), z(-1) {}
 
 	Coord3D operator+(const Coord3D& other) {
 		Coord3D<T> ret(this->x + other.x, this->y + other.y, this->z + other.z);
@@ -94,6 +95,84 @@ public:
 			(this->z - other.z) * (this->z - other.z));
 	}
 };
+
+template <class T>
+class Marker {
+public:
+	std::string name;
+	cv::Point_<T> location;
+
+	bool isValid() {
+		return location.x >= 0 && location.y >= 0 &&
+			!name.empty();
+	}
+	bool operator<(const Marker& other) {
+		return this->name < other.name;
+	}
+	bool operator>(const Marker& other) {
+		return this->name > other.name;
+	}
+	bool operator==(const Marker& other) {
+		return this->name == other.name;
+	}
+	bool operator!=(const Marker& other) {
+		return this->name != other.name;
+	}
+	bool operator<=(const Marker& other) {
+		return this->name <= other.name;
+	}
+	bool operator>=(const Marker& other) {
+		return this->name >= other.name;
+	}
+};
+
+template<class T>
+class Window {
+public:
+	std::string name;
+	cv::Point_<T> vertices[4];
+
+	bool isValid() {
+		return vertices[0].x >= 0 && vertices[0].y >= 0 &&
+			vertices[1].x >= 0 && vertices[1].y >= 0 &&
+			vertices[2].x >= 0 && vertices[2].y >= 0 &&
+			vertices[3].x >= 0 && vertices[3].y >= 0 && !name.empty();
+	}
+};
+
+class WindowStructure {
+	bool isValidWindow(int index, int width, int height) const;
+public:
+	vector<std::string> names;
+	vector<cv::Point2i> vertices;
+
+	WindowStructure(const vector<Window<double>*>& windows, int width, int height) {
+		set(windows, width, height);
+	}
+	WindowStructure() {}
+
+	size_t size() const { return names.size(); }
+	void pushWindow(Window<int> window) {
+		names.push_back(window.name);
+		for (int i = 0; i < 4; i++)
+			vertices.push_back(window.vertices[i]);
+	}
+	void set(const vector<Window<double>*>& windows, int width, int height);
+	void checkVaildWindow(int width, int height, vector<bool>& valids) const;
+	void perspectiveXform(cv::Mat& homographyMat);
+	void drawWindow(cv::Mat& img, int index) const;
+};
+
+void markerRelToAbsol(const Marker<double>& relMarker, Marker<int>& absolMarker, int width, int height);
+void windowRelToAbsol(const Window<double>& relWindow, Window<int>& absolWindow, int width, int height);
+
+int readMarkers(const std::string& fileName, vector<Marker<double>*>& markers);
+int readWindows(const std::string& fileName, vector<Window<double>*>& windows);
+int readWindows(const std::string& fileName, WindowStructure& windowStruct, int width, int height);
+
+int getMarkerMatchHomography(vector<Marker<int>*>& srcMarkers, vector<Marker<int>*>& dstMarkers, cv::Mat& h);
+
+void drawWindows(cv::Mat& img, const WindowStructure& winStruct);
 
 // GPS coordinate to normalized coordinate (-1 ~ 1)
 Coord2D<double> GPStoNormalized2D(double latitude, double longitude);
@@ -123,6 +202,6 @@ void drawPlane(const std::vector<Coord2D<double>>& points, std::string windowNam
 void drawPlane(const std::vector<GIS_DB::Surface*>& surfaces, std::string windowName,
 	int width = DEFAULT_PLANE_PLOT_WIDTH, int height = DEFAULT_PLANE_PLOT_HEIGHT);
 
-
 void gisTest();
+void transformTest();
 #endif

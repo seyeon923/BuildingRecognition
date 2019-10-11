@@ -12,11 +12,13 @@
 using namespace std;
 
 int main() {
-	// windows specific
-	_setmode(_fileno(stdout), _O_U16TEXT);
+	//// windows specific
+	//_setmode(_fileno(stdout), _O_U16TEXT);
 
-	mysqlTest();
-	gisTest();
+	//mysqlTest();
+	//gisTest();
+
+	transformTest();
 
 	return 0;
 }

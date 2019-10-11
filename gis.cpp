@@ -1,5 +1,11 @@
 #include "gis.hpp"
+#include "utility.hpp"
+
+#include <opencv2/calib3d.hpp>
+
 #include <iostream>
+#include <fstream>
+#include <algorithm>
 
 using namespace std;
 using namespace cv;
@@ -67,6 +73,181 @@ cv::Point2d normalizedToImageCoord(double x, double y, int width, int height) {
 	p.x = (int)((x + 1) / 2 * width);
 	p.y = (int)((-y + 1) / 2 * height);
 	return p;
+}
+
+void markerRelToAbsol(const Marker<double>& relMarker, Marker<int>& absolMarker, int width, int height) {
+	absolMarker.name = relMarker.name;
+	absolMarker.location.x = (int)(relMarker.location.x * width);
+	absolMarker.location.y = (int)(relMarker.location.y * height);
+}
+
+void windowRelToAbsol(const Window<double>& relWindow, Window<int>& absolWindow, int width, int height) {
+	absolWindow.name = relWindow.name;
+	for (int i = 0; i < 4; i++) {
+		absolWindow.vertices[i].x = (int)(relWindow.vertices[i].x * width);
+		absolWindow.vertices[i].y = (int)(relWindow.vertices[i].y * height);
+	}
+}
+
+int readMarkers(const std::string& fileName, vector<Marker<double>*>& markers) {
+	ifstream ifs(fileName);
+	if (!ifs.is_open())
+		return -1;
+	for (string line; getline(ifs, line);) {
+		stringstream ss(line);
+		Marker<double>* pMarker = new Marker<double>();
+		ss >> pMarker->name;
+		ss >> pMarker->location.x;
+		ss >> pMarker->location.y;
+		if (!pMarker->isValid()) {
+			delete pMarker;
+			continue;
+		}
+		markers.push_back(pMarker);
+	}
+	ifs.close();
+	return 0;
+}
+
+int readWindows(const std::string& fileName, vector<Window<double>*>& windows) {
+	ifstream ifs(fileName);
+	if (!ifs.is_open())
+		return -1;
+	for (string line; getline(ifs, line);) {
+		stringstream ss(line);
+		Window<double>* pWindow = new Window<double>();
+		ss >> pWindow->name;
+		ss >> pWindow->vertices[0].x;
+		ss >> pWindow->vertices[0].y;
+		ss >> pWindow->vertices[1].x;
+		ss >> pWindow->vertices[1].y;
+		ss >> pWindow->vertices[2].x;
+		ss >> pWindow->vertices[2].y;
+		ss >> pWindow->vertices[3].x;
+		ss >> pWindow->vertices[3].y;
+		if (!pWindow->isValid()) {
+			delete pWindow;
+			continue;
+		}
+		windows.push_back(pWindow);
+	}
+	return 0;
+}
+
+int readWindows(const std::string& fileName, WindowStructure& windowStruct, int width, int height) {
+	vector<Window<double>*> windows;
+	int ret = readWindows(fileName, windows);
+	if (ret < 0)
+		return ret;
+	windowStruct.set(windows, width, height);
+	return 0;
+}
+
+void WindowStructure::set(const vector<Window<double>*>& windows, int width, int height) {
+	this->names.clear();
+	this->vertices.clear();
+
+	for (Window<double>* pWindow : windows) {
+		Window<int> windowI;
+		windowI.name = pWindow->name;
+		for (int i = 0; i < 4; i++) {
+			windowI.vertices[i].x = (int)(pWindow->vertices[i].x * width);
+			windowI.vertices[i].y = (int)(pWindow->vertices[i].y * height);
+		}
+		pushWindow(windowI);
+	}
+}
+
+bool WindowStructure::isValidWindow(int index, int width, int height) const {
+	return vertices[index * 4].x >= 0 && vertices[index * 4].x < width &&
+		vertices[index * 4].y >= 0 && vertices[index * 4].y < height &&
+		vertices[index * 4 + 1].x >= 0 && vertices[index * 4 + 1].x < width &&
+		vertices[index * 4 + 1].y >= 0 && vertices[index * 4 + 1].y < height &&
+		vertices[index * 4 + 2].x >= 0 && vertices[index * 4 + 2].x < width &&
+		vertices[index * 4 + 2].y >= 0 && vertices[index * 4 + 2].y < height &&
+		vertices[index * 4 + 3].x >= 0 && vertices[index * 4 + 3].x < width &&
+		vertices[index * 4 + 3].y >= 0 && vertices[index * 4 + 3].y < height;
+}
+
+void WindowStructure::checkVaildWindow(int width, int height, vector<bool>& valids) const {
+	valids.resize(size());
+	for (int i = 0; i < this->size(); i++) 
+		valids[i] = isValidWindow(i, width, height);
+}
+
+void WindowStructure::perspectiveXform(Mat& homographyMat) {
+	vector<Point2f> xformedPoints(this->size() * 4);
+	vector<Point2f> originPoints(this->size() * 4);
+
+	for (int i = 0; i < this->size(); i++) {
+		originPoints[(size_t)i * 4].x = (float)this->vertices[(size_t)i * 4].x;
+		originPoints[(size_t)i * 4].y = (float)this->vertices[(size_t)i * 4].y;
+		originPoints[(size_t)i * 4 + 1].x = (float)this->vertices[(size_t)i * 4 + 1].x;
+		originPoints[(size_t)i * 4 + 1].y = (float)this->vertices[(size_t)i * 4 + 1].y;
+		originPoints[(size_t)i * 4 + 2].x = (float)this->vertices[(size_t)i * 4 + 2].x;
+		originPoints[(size_t)i * 4 + 2].y = (float)this->vertices[(size_t)i * 4 + 2].y;
+		originPoints[(size_t)i * 4 + 3].x = (float)this->vertices[(size_t)i * 4 + 3].x;
+		originPoints[(size_t)i * 4 + 3].y = (float)this->vertices[(size_t)i * 4 + 3].y;
+	}
+	perspectiveTransform(originPoints, xformedPoints, homographyMat);
+	for (int i = 0; i < this->size(); i++) {
+		this->vertices[(size_t)i * 4].x = (int)xformedPoints[(size_t)i * 4].x;
+		this->vertices[(size_t)i * 4].y = (int)xformedPoints[(size_t)i * 4].y;
+		this->vertices[(size_t)i * 4 + 1].x = (int)xformedPoints[(size_t)i * 4 + 1].x;
+		this->vertices[(size_t)i * 4 + 1].y = (int)xformedPoints[(size_t)i * 4 + 1].y;
+		this->vertices[(size_t)i * 4 + 2].x = (int)xformedPoints[(size_t)i * 4 + 2].x;
+		this->vertices[(size_t)i * 4 + 2].y = (int)xformedPoints[(size_t)i * 4 + 2].y;
+		this->vertices[(size_t)i * 4 + 3].x = (int)xformedPoints[(size_t)i * 4 + 3].x;
+		this->vertices[(size_t)i * 4 + 3].y = (int)xformedPoints[(size_t)i * 4 + 3].y;
+	}
+}
+
+int getMarkerMatchHomography(vector<Marker<int>*>& srcMarkers, vector<Marker<int>*>& dstMarkers, Mat& h) {
+	h = Mat(Size(3, 3), CV_64FC1);
+	function<bool(Marker<int>*, Marker<int>*)> pred = [](Marker<int>* pa, Marker<int>* pb) {return *pa < *pb; };
+	sort(srcMarkers.begin(), srcMarkers.end(), pred);
+	sort(dstMarkers.begin(), dstMarkers.end(), pred);
+
+	vector<Point2f> srcPoints, dstPoints;
+	for (vector<Marker<int>*>::const_iterator pSrcMarkerIter = srcMarkers.begin(), pDstMarkerIter = dstMarkers.begin();
+		pSrcMarkerIter != srcMarkers.end() && pDstMarkerIter != dstMarkers.end(); ) {
+		Marker<int> srcMarker = **pSrcMarkerIter;
+		Marker<int> dstMarker = **pDstMarkerIter;
+		if (srcMarker == dstMarker) {
+			srcPoints.push_back(srcMarker.location);
+			dstPoints.push_back(dstMarker.location);
+			pSrcMarkerIter++;
+			pDstMarkerIter++;
+		}
+		else if (srcMarker < dstMarker)
+			pSrcMarkerIter++;
+		else
+			pDstMarkerIter++;
+	}
+
+	if (srcPoints.size() < 4) {
+		wcerr << "Matched Marker have to be more than or equal to 4" << endl;
+		return -1;
+	}
+
+	h = findHomography(srcPoints, dstPoints, RANSAC);
+	return 0;
+}
+
+void drawWindows(cv::Mat& img, const WindowStructure& winStruct) {
+	vector<bool> valids;
+	winStruct.checkVaildWindow(img.size().width, img.size().height, valids);
+	for (int i = 0; i < winStruct.size(); i++)
+		if (valids[i])
+			winStruct.drawWindow(img, i);
+}
+
+void WindowStructure::drawWindow(cv::Mat& img, int index) const {
+	putText(img, names[(size_t)index], vertices[(size_t)index * 4], FONT_HERSHEY_COMPLEX, 1, Scalar(0, 0, 255));
+	line(img, vertices[(size_t)index * 4], vertices[(size_t)index * 4 + 1], Scalar(0, 0, 255), 2);
+	line(img, vertices[(size_t)index * 4 + 1], vertices[(size_t)index * 4 + 2], Scalar(0, 0, 255), 2);
+	line(img, vertices[(size_t)index * 4 + 2], vertices[(size_t)index * 4 + 3], Scalar(0, 0, 255), 2);
+	line(img, vertices[(size_t)index * 4 + 3], vertices[(size_t)index * 4], Scalar(0, 0, 255), 2);
 }
 
 void gisTest() {
@@ -174,4 +355,54 @@ void gisTest() {
 	db.selectFromSurface(surfaces, "");
 	drawPlane(surfaces, "Buildings Outline");
 	clearPointerVec(surfaces);
+}
+
+void transformTest() {
+	string refWindowFileName = "ref_CheonnongHallFront1_window.txt";
+	string refMarkerFileName = "ref_CheonnongHallFront1_marker.txt";
+	string testImgFileName = "CheonnongHallPos110004.jpg";
+	string testMarkerFileName = "CheonnongHallPos110004_marker.txt";
+
+	Mat img = imread(testImgFileName);
+	int width = img.size().width;
+	int height = img.size().height;
+
+	vector<Marker<double>*> refRelMarkers, testRelMarkers;
+	vector<Marker<int>*> refAbMarkers, testAbMarkers;
+	
+	if (readMarkers(refMarkerFileName, refRelMarkers) < 0) {
+		cout << "Read markers from file " << refMarkerFileName << " failed!" << endl;
+		return;
+	}
+	if (readMarkers(testMarkerFileName, testRelMarkers) < 0) {
+		cout << "Read markers from file " << testMarkerFileName << " failed!" << endl;
+		return;
+	}
+
+	for (Marker<double>* pRelMarker : refRelMarkers) {
+		Marker<int>* pAbMarker = new Marker<int>();
+		markerRelToAbsol(*pRelMarker, *pAbMarker, width, height);
+		refAbMarkers.push_back(pAbMarker);
+	}
+	clearPointerVec(refRelMarkers);
+
+	for (Marker<double>* pRelMarker : testRelMarkers) {
+		Marker<int>* pAbMarker = new Marker<int>();
+		markerRelToAbsol(*pRelMarker, *pAbMarker, width, height);
+		testAbMarkers.push_back(pAbMarker);
+	}
+	clearPointerVec(testRelMarkers);
+
+	Mat H;
+	getMarkerMatchHomography(refAbMarkers, testAbMarkers, H);
+
+	WindowStructure winStruct;
+	readWindows(refWindowFileName, winStruct, width, height);
+	
+	winStruct.perspectiveXform(H);
+	drawWindows(img, winStruct);
+
+	namedWindow(testImgFileName, WINDOW_NORMAL);
+	imshow(testImgFileName, img);
+	waitKey();
 }

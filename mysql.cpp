@@ -1,4 +1,6 @@
 #include "mysql.hpp"
+#include "utility.hpp"
+
 #include <iostream>
 #include <cstdarg>
 

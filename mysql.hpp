@@ -266,12 +266,5 @@ const vector<SurfaceCol> SurfaceAllSelectList = {
 	SurfaceCol::TOPRIGHT_LATITUDE, SurfaceCol::TOPRIGHT_LONGITUDE, SurfaceCol::TOPRIGHT_ALTITUDE, SurfaceCol::BUILDING_ID
 };
 
-template<class T>
-void clearPointerVec(vector<T*>& vec) {
-	for (T* pEle : vec)
-		delete pEle;
-	vec.clear();
-}
-
 void mysqlTest();
 #endif
