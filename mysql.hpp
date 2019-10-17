@@ -267,4 +267,5 @@ const vector<SurfaceCol> SurfaceAllSelectList = {
 };
 
 void mysqlTest();
+
 #endif

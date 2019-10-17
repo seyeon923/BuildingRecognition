@@ -99,80 +99,123 @@ public:
 template <class T>
 class Marker {
 public:
-	std::string name;
+	int id;
+	float prob;
 	cv::Point_<T> location;
 
-	bool isValid() {
-		return location.x >= 0 && location.y >= 0 &&
-			!name.empty();
+	Marker() {}
+	Marker(int id, float prob, cv::Point_<T> location) :
+		id(id), prob(prob), location(location) {}
+
+	bool operator<(const Marker<T>& other) {
+		return this->id < other.id;
 	}
-	bool operator<(const Marker& other) {
-		return this->name < other.name;
+	bool operator>(const Marker<T>& other) {
+		return this->id > other.id;
 	}
-	bool operator>(const Marker& other) {
-		return this->name > other.name;
+	bool operator==(const Marker<T>& other) {
+		return this->id == other.id;
 	}
-	bool operator==(const Marker& other) {
-		return this->name == other.name;
+	bool operator!=(const Marker<T>& other) {
+		return this->id != other.id;
 	}
-	bool operator!=(const Marker& other) {
-		return this->name != other.name;
+	bool operator<=(const Marker<T>& other) {
+		return this->id <= other.id;
 	}
-	bool operator<=(const Marker& other) {
-		return this->name <= other.name;
-	}
-	bool operator>=(const Marker& other) {
-		return this->name >= other.name;
+	bool operator>=(const Marker<T>& other) {
+		return this->id >= other.id;
 	}
 };
+
+using MarkerI = Marker<int>;
+using MarkerD = Marker<double>;
+
 
 template<class T>
 class Window {
 public:
-	std::string name;
+	int id;
 	cv::Point_<T> vertices[4];
 
-	bool isValid() {
-		return vertices[0].x >= 0 && vertices[0].y >= 0 &&
-			vertices[1].x >= 0 && vertices[1].y >= 0 &&
-			vertices[2].x >= 0 && vertices[2].y >= 0 &&
-			vertices[3].x >= 0 && vertices[3].y >= 0 && !name.empty();
+	std::vector<cv::Point_<T>> getVertices() const {
+		std::vector<cv::Point_<T>> vec;
+		vec.push_back(vertices[0]);
+		vec.push_back(vertices[1]);
+		vec.push_back(vertices[2]);
+		vec.push_back(vertices[3]);
+		return vec;
 	}
 };
+
+using WindowI = Window<int>;
+using WindowD = Window<double>;
+
+// get doubled area of window
+int getDoubledArea(const WindowI& window);
+// get doubled area of polygon, points are vertices of polygon in order
+int getDoubledArea(const std::vector<cv::Point2i>& points);
+// get doubled intersected area of two polygons
+int getDoubledIntersectedArea(const std::vector<cv::Point2i>& vertices1, const std::vector<cv::Point2i>& vertices2);
+// get IOU of two polygons
+double getIOU(const std::vector<cv::Point2i>& vertices1, const std::vector<cv::Point2i>& vertices2);
+// get IOU of two windows
+double getIOU(const WindowI& window1, const WindowI& window2);
+
+// find intersected point between two lines, and return if exist
+bool findIntersectedPointOfLine(const cv::Point2i p1ofLine1, const cv::Point2i p2ofLine1,
+	const cv::Point2i p1ofLine2, const cv::Point2i p2ofLine2, cv::Point2i& intersectedPoint);
+// find intersected point between two straight lines, and return if exist
+bool findIntersectedPointOfSLine(const cv::Point2i p1ofLine1, const cv::Point2i p2ofLine1,
+	const cv::Point2i p1ofLine2, const cv::Point2i p2ofLine2, cv::Point2i& intersectedPoint);
 
 class WindowStructure {
 	bool isValidWindow(int index, int width, int height) const;
 public:
-	vector<std::string> names;
+	vector<int> ids;
 	vector<cv::Point2i> vertices;
 
 	WindowStructure(const vector<Window<double>*>& windows, int width, int height) {
 		set(windows, width, height);
 	}
+	WindowStructure(const vector<Window<double>>& windows, int width, int height) {
+		set(windows, width, height);
+	}
+	WindowStructure(const vector<WindowI>& windows) { set(windows); }
 	WindowStructure() {}
 
-	size_t size() const { return names.size(); }
+	WindowStructure& operator+=(WindowStructure& other);
+
+	size_t size() const { return ids.size(); }
 	void pushWindow(Window<int> window) {
-		names.push_back(window.name);
+		ids.push_back(window.id);
 		for (int i = 0; i < 4; i++)
 			vertices.push_back(window.vertices[i]);
 	}
 	void set(const vector<Window<double>*>& windows, int width, int height);
+	void set(const vector<Window<double>>& windows, int width, int height);
+	void set(const vector<Window<int>>& windows);
 	void checkVaildWindow(int width, int height, vector<bool>& valids) const;
 	void perspectiveXform(cv::Mat& homographyMat);
-	void drawWindow(cv::Mat& img, int index) const;
+	void drawWindow(cv::Mat& img, int index, const std::vector<string>& windowNames) const;
+	void getWindows(std::vector<WindowI>& windows) const;
 };
 
-void markerRelToAbsol(const Marker<double>& relMarker, Marker<int>& absolMarker, int width, int height);
+// get IOU of two vector<WindowI>, groundTruth shall not be include same window(same id)
+double getIOU(std::vector<WindowI>& windows, std::vector<WindowI>& groundTruth);
+// get IOU of two WindowStructure, groundTruth shall not be include same window(same id)
+double getIOU(WindowStructure& winStruct, WindowStructure& groundTruth);
+
+void markerRelToAbsol(const MarkerD& relMarker, MarkerI& absolMarker, int width, int height);
 void windowRelToAbsol(const Window<double>& relWindow, Window<int>& absolWindow, int width, int height);
 
-int readMarkers(const std::string& fileName, vector<Marker<double>*>& markers);
+int readMarkers(const std::string& fileName, vector<MarkerD>& markers);
 int readWindows(const std::string& fileName, vector<Window<double>*>& windows);
 int readWindows(const std::string& fileName, WindowStructure& windowStruct, int width, int height);
 
-int getMarkerMatchHomography(vector<Marker<int>*>& srcMarkers, vector<Marker<int>*>& dstMarkers, cv::Mat& h);
+int getMarkerMatchHomography(vector<MarkerI>& srcMarkers, vector<MarkerI>& dstMarkers, cv::Mat& h);
 
-void drawWindows(cv::Mat& img, const WindowStructure& winStruct);
+void drawWindows(cv::Mat& img, const WindowStructure& winStruct, const std::vector<string>& windowNames);
+void drawMarkers(cv::Mat& img, const std::vector<MarkerI>& markers, const std::vector<string>& markerNames);
 
 // GPS coordinate to normalized coordinate (-1 ~ 1)
 Coord2D<double> GPStoNormalized2D(double latitude, double longitude);
@@ -202,6 +245,13 @@ void drawPlane(const std::vector<Coord2D<double>>& points, std::string windowNam
 void drawPlane(const std::vector<GIS_DB::Surface*>& surfaces, std::string windowName,
 	int width = DEFAULT_PLANE_PLOT_WIDTH, int height = DEFAULT_PLANE_PLOT_HEIGHT);
 
+// check if point is inside of polygon, points are vertices of the polygon in order
+bool isInside(const cv::Point2i& point, const std::vector<cv::Point2i>& points);
+// check if point is inside of window
+bool isInside(const cv::Point2i& point, const WindowI& window);
+
+
 void gisTest();
 void transformTest();
+
 #endif
