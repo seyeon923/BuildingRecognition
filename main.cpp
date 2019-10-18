@@ -10,8 +10,10 @@ using namespace std;
 
 void doCmdTest(WinDetector& detector, const char* imgdir = nullptr);
 void doCmdIOU(WinDetector& detector, const string& testImgDir);
+void doCmdIOUyolo(WinDetector& detector, const string& testImgDir);
+void doCmdTestYolo(WinDetector& detector, const char* imgDir = nullptr);
 
-enum CMD { TEST, IOU, UNKNOWN};
+enum CMD { TEST, IOU, TEST_YOLO, IOU_YOLO, UNKNOWN};
 
 int main(int argc, char* argv[]) {
 	if (argc < 5) {
@@ -30,6 +32,16 @@ int main(int argc, char* argv[]) {
 			return 0;
 		}
 		cmd = IOU;
+	}
+	else if (cmdS.compare("testyolo") == 0)
+		cmd = TEST_YOLO;
+	else if (cmdS.compare("iouyolo") == 0) {
+		if (argc < 6) {
+			cout << "test img directory isn't designated" << endl;
+			cout << "Usage: program.exe iouyolo <data file> <YOLO cfg file> <weights file> <test imgs dir>" << endl;
+			return 0;
+		}
+		cmd = IOU_YOLO;
 	}
 	else {
 		cout << "Unknown command " << cmdS << endl;
@@ -50,6 +62,14 @@ int main(int argc, char* argv[]) {
 		break;
 	case IOU:
 		doCmdIOU(detector, argv[5]);
+		break;
+	case TEST_YOLO:
+		if (argc > 5)
+			doCmdTestYolo(detector, argv[5]);
+		else doCmdTestYolo(detector);
+		break;
+	case IOU_YOLO:
+		doCmdIOUyolo(detector, argv[5]);
 		break;
 	default:
 		cout << "Unknown command " << cmdS << endl;
@@ -137,4 +157,68 @@ void doCmdIOU(WinDetector& detector, const string& testImgDir) {
 		}
 	}
 	cout << "average IOU of " << count << " images: " << totalIOU / count << endl;
+}
+
+void doCmdIOUyolo(WinDetector& detector, const string& testImgDir) {
+	Detector& yoloDetector = detector;
+	double totalIOU = 0;
+	int count = 0;
+	for (const auto& entry : std::filesystem::directory_iterator(testImgDir)) {
+		string fileName = entry.path().generic_string();
+		if (fileName.substr(fileName.size() - 3).compare("jpg") == 0) {
+			vector<bbox_t> bboxes;
+			WindowStructure winStruct, refWinSt;
+			string fileNameWOExt = fileName.substr(0, fileName.size() - 4);
+			bboxes = yoloDetector.detect(fileName);
+			setWindowStructure(bboxes, winStruct);
+			cv::Size2i imgSize = detector.lastDetectedImageSize;
+			readWindows(fileNameWOExt + "_quadrangle.txt", refWinSt, imgSize.width, imgSize.height);
+			double IOU = getIOU(winStruct, refWinSt);
+			cout << "image " << fileName << " IOU: " << IOU << endl;
+			totalIOU += IOU;
+			count++;
+		}
+	}
+	cout << "average IOU of " << count << " images: " << totalIOU / count << endl;
+}
+
+void doCmdTestYolo(WinDetector& detector, const char* imgDir) {
+	Detector& yoloDetector = detector;
+	if (imgDir == nullptr) {
+		string imgFileName;
+		while (true) {
+			WindowStructure winStruct;
+			vector<bbox_t> bboxes;
+			cout << "enter image file name: ";
+			cin >> imgFileName;
+			bboxes = yoloDetector.detect(imgFileName);
+			cv::Mat img = cv::imread(imgFileName);
+			setWindowStructure(bboxes, winStruct);
+			drawWindows(img, winStruct, detector.windowNames);
+
+			cv::namedWindow(imgFileName, CV_WINDOW_NORMAL);
+			cv::imshow(imgFileName, img);
+			cv::waitKey();
+			cv::destroyWindow(imgFileName);
+		}
+	}
+	else {
+		for (const auto& entry : filesystem::directory_iterator(imgDir)) {
+			string imgFileName = entry.path().generic_string();
+			if (imgFileName.substr(imgFileName.size() - 3).compare("jpg") == 0) {
+				WindowStructure winStruct;
+				vector<bbox_t> bboxes;
+				bboxes = yoloDetector.detect(imgFileName);
+				setWindowStructure(bboxes, winStruct);
+				cv::Mat img = cv::imread(imgFileName);
+				drawWindows(img, winStruct, detector.windowNames);
+
+				cv::namedWindow(imgFileName, CV_WINDOW_NORMAL);
+				cv::imshow(imgFileName, img);
+				cv::waitKey();
+				cv::destroyWindow(imgFileName);
+			}
+		}
+		return;
+	}
 }

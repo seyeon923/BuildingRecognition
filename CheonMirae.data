@@ -1,0 +1,3 @@
+windowNames = CheonMiraeWindow.names
+markerNames = CheonMiraeMarker.names
+buildingInfoDir = buildingInfoBoth

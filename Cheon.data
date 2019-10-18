@@ -1,0 +1,3 @@
+windowNames = CheonWindow.names
+markerNames = CheonMarker.names
+buildingInfoDir = buildingInfo
