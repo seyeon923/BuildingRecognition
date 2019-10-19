@@ -327,7 +327,7 @@ int getMarkerMatchHomography(vector<MarkerI>& srcMarkers, vector<MarkerI>& dstMa
 	cout << endl << "dst points" << endl;
 	for (auto point : dstPoints)
 		cout << point.x << ", " << point.y << endl;*/
-	h = findHomography(srcPoints, dstPoints, RANSAC);
+	h = findHomography(srcPoints, dstPoints);
 	return 0;
 }
 
@@ -631,7 +631,7 @@ void gisTest() {
 void drawMarkers(cv::Mat& img, const std::vector<MarkerI>& markers, const vector<string>& markerNames) {
 	for (MarkerI marker : markers) {
 		putText(img, markerNames[marker.id], marker.location, FONT_HERSHEY_COMPLEX, 1, objIdToColor(marker.id));
-		circle(img, marker.location, 2, objIdToColor(marker.id), FILLED);
+		circle(img, marker.location, 4, objIdToColor(marker.id), FILLED);
 	}
 }
 

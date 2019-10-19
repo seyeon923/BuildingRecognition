@@ -2,6 +2,7 @@
 #include <cstdio>
 #include <iostream>
 #include <filesystem>
+#include <cmath>
 
 #include "mysql.hpp"
 #include "detector.hpp"
@@ -83,12 +84,16 @@ void doCmdTest(WinDetector& detector, const char* imgDir) {
 	if (imgDir == nullptr) {
 		string imgFileName;
 		while (true) {
-			WindowStructure winStruct;
+			WindowStructure winStruct, refStructure;
 			cout << "enter image file name: ";
 			cin >> imgFileName;
+			string fileNameWOExt = imgFileName.substr(0, imgFileName.size() - 4);
 			detector.detect(imgFileName, winStruct, true);
 			cv::Mat img = cv::imread(imgFileName);
 			drawWindows(img, winStruct, detector.windowNames);
+			readWindows(fileNameWOExt + "_quadrangle.txt", refStructure, img.size().width, img.size().height);
+			double IoU = getIOU(winStruct, refStructure);
+			cout << "IoU: " << IoU << endl;
 
 			cv::namedWindow(imgFileName, CV_WINDOW_NORMAL);
 			cv::imshow(imgFileName, img);
@@ -98,12 +103,16 @@ void doCmdTest(WinDetector& detector, const char* imgDir) {
 	}
 	else {
 		for (const auto& entry : filesystem::directory_iterator(imgDir)) {
-			WindowStructure winStruct;
+			WindowStructure winStruct, refStructure;
 			string imgFileName = entry.path().generic_string();
+			string fileNameWOExt = imgFileName.substr(0, imgFileName.size() - 4);
 			if (imgFileName.substr(imgFileName.size() - 3).compare("jpg") == 0) {
 				detector.detect(imgFileName, winStruct, true);
 				cv::Mat img = cv::imread(imgFileName);
 				drawWindows(img, winStruct, detector.windowNames);
+				readWindows(fileNameWOExt + "_quadrangle.txt", refStructure, img.size().width, img.size().height);
+				double IoU = getIOU(winStruct, refStructure);
+				cout << "IoU: " << IoU << endl;
 
 				cv::namedWindow(imgFileName, CV_WINDOW_NORMAL);
 				cv::imshow(imgFileName, img);
@@ -128,6 +137,8 @@ void doCmdIOU(WinDetector& detector, const string& testImgDir) {
 			readWindows(fileNameWOExt + "_quadrangle.txt", refWinSt, imgSize.width, imgSize.height);
 			double IOU = getIOU(winStruct, refWinSt);
 			cout << "image " << fileName << " IOU: " << IOU << endl;
+			if (isinf(IOU))
+				IOU = 0;
 			totalIOU += IOU;
 			count++;
 		}
@@ -151,6 +162,8 @@ void doCmdIOUyolo(WinDetector& detector, const string& testImgDir) {
 			readWindows(fileNameWOExt + "_quadrangle.txt", refWinSt, imgSize.width, imgSize.height);
 			double IOU = getIOU(winStruct, refWinSt);
 			cout << "image " << fileName << " IOU: " << IOU << endl;
+			if (isinf(IOU))
+				IOU = 0;
 			totalIOU += IOU;
 			count++;
 		}
@@ -163,14 +176,18 @@ void doCmdTestYolo(WinDetector& detector, const char* imgDir) {
 	if (imgDir == nullptr) {
 		string imgFileName;
 		while (true) {
-			WindowStructure winStruct;
+			WindowStructure winStruct, refStructure;
 			vector<bbox_t> bboxes;
 			cout << "enter image file name: ";
 			cin >> imgFileName;
+			string fileNameWOExt = imgFileName.substr(0, imgFileName.size() - 4);
 			bboxes = yoloDetector.detect(imgFileName);
 			cv::Mat img = cv::imread(imgFileName);
 			setWindowStructure(bboxes, winStruct);
 			drawWindows(img, winStruct, detector.windowNames);
+			readWindows(fileNameWOExt + "_quadrangle.txt", refStructure, img.size().width, img.size().height);
+			double IoU = getIOU(winStruct, refStructure);
+			cout << "IoU: " << IoU << endl;
 
 			cv::namedWindow(imgFileName, CV_WINDOW_NORMAL);
 			cv::imshow(imgFileName, img);
@@ -182,12 +199,16 @@ void doCmdTestYolo(WinDetector& detector, const char* imgDir) {
 		for (const auto& entry : filesystem::directory_iterator(imgDir)) {
 			string imgFileName = entry.path().generic_string();
 			if (imgFileName.substr(imgFileName.size() - 3).compare("jpg") == 0) {
-				WindowStructure winStruct;
+				WindowStructure winStruct, refStructure;
 				vector<bbox_t> bboxes;
+				string fileNameWOExt = imgFileName.substr(0, imgFileName.size() - 4);
 				bboxes = yoloDetector.detect(imgFileName);
 				setWindowStructure(bboxes, winStruct);
 				cv::Mat img = cv::imread(imgFileName);
 				drawWindows(img, winStruct, detector.windowNames);
+				readWindows(fileNameWOExt + "_quadrangle.txt", refStructure, img.size().width, img.size().height);
+				double IoU = getIOU(winStruct, refStructure);
+				cout << "IoU: " << IoU << endl;
 
 				cv::namedWindow(imgFileName, CV_WINDOW_NORMAL);
 				cv::imshow(imgFileName, img);
