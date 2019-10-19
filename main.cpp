@@ -76,30 +76,6 @@ int main(int argc, char* argv[]) {
 		return 0;
 	}
 
-	/*vector<cv::Point2i> vertices(4);
-	vertices[0].x = 0;  vertices[0].y = 0;
-	vertices[1].x = 10;  vertices[1].y = 0;
-	vertices[2].x = 10; vertices[2].y = 10;
-	vertices[3].x = 0; vertices[3].y = 10;
-	cout << "doubled Area: " << getDoubledArea(vertices) << endl;
-	if (isInside(cv::Point2i(25, 5), vertices))
-		cout << "ture" << endl;
-	else
-		cout << "false" << endl;
-
-	vector<cv::Point2i> v2;
-	v2.push_back(cv::Point2i(5, 5));
-	v2.push_back(cv::Point2i(-5, -5));
-	v2.push_back(cv::Point2i(15, -5));
-
-	cout << "intersected Area: " << getDoubledIntersectedArea(vertices, v2) << endl;
-	cout << "IOU: " << getIOU(vertices, v2) << endl;;
-
-	WindowStructure winStruct1, winStruct2;
-	readWindows("ref_CheonnongHallFront1_window_half.txt", winStruct1, 1920, 1080);
-	readWindows("ref_CheonnongHallFront1_window.txt", winStruct2, 1920, 1080);
-	cout << "IOU: " << getIOU(winStruct1, winStruct2) << endl;*/
-
 	return 0;
 }
 

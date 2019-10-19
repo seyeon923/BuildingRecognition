@@ -3,12 +3,12 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LocalDebuggerEnvironment>PATH=$(ProjectDir)\3rdparty\MySQL_Connector\lib64;$(ProjectDir)\3rdparty\darknet\bin;$(ProjectDir)\3rdparty\opencv\bin;%PATH%; $(LocalDebuggerEnvironment)</LocalDebuggerEnvironment>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
-    <LocalDebuggerCommandArguments>test CheonMirae.data CheonMirae.cfg CheonMirae.weights </LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>iou Cheon.data Cheon.cfg Cheon.weights CheonTest</LocalDebuggerCommandArguments>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LocalDebuggerEnvironment>PATH=$(ProjectDir)\3rdparty\MySQL_Connector\lib64\debug;$(ProjectDir)\3rdparty\darknet\bin;$(ProjectDir)\3rdparty\opencv\bin;%PATH%; $(LocalDebuggerEnvironment)</LocalDebuggerEnvironment>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
-    <LocalDebuggerCommandArguments>test CheonMirae.data CheonMirae.cfg CheonMirae.weights </LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>iou Cheon.data Cheon.cfg Cheon.weights CheonTest</LocalDebuggerCommandArguments>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LocalDebuggerEnvironment>$(LocalDebuggerEnvironment)</LocalDebuggerEnvironment>

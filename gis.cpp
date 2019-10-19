@@ -631,7 +631,7 @@ void gisTest() {
 void drawMarkers(cv::Mat& img, const std::vector<MarkerI>& markers, const vector<string>& markerNames) {
 	for (MarkerI marker : markers) {
 		putText(img, markerNames[marker.id], marker.location, FONT_HERSHEY_COMPLEX, 1, objIdToColor(marker.id));
-		drawMarker(img, marker.location, objIdToColor(marker.id), MARKER_SQUARE);
+		circle(img, marker.location, 2, objIdToColor(marker.id), FILLED);
 	}
 }
 
